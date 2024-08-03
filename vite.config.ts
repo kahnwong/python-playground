@@ -8,7 +8,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/python-playground/",
+  base: "https://python.karnwong.me/", // https://github.com/vitejs/vite/discussions/13910#discussioncomment-6832557
   plugins: [
     compression(),
     react(),
