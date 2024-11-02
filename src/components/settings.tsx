@@ -1,6 +1,8 @@
-import React, { useState } from "react";
-import { useStore } from "@/store";
+import { useCallback } from "react";
+import { useStore } from "@/store/useStore";
 
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 import {
   Drawer,
   DrawerClose,
@@ -11,8 +13,6 @@ import {
   DrawerTitle,
   DrawerTrigger
 } from "./ui/drawer";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
 
 import {
   DownloadIcon,
@@ -21,11 +21,24 @@ import {
   LoaderIcon
 } from "lucide-react";
 
-export default function Settings() {
-  const { code, setOutput, setError } = useStore();
-  const [isLibLoading, setIsLibLoading] = useState(false);
+interface SettingsSectionProps {
+  title: string;
+  children: React.ReactNode;
+}
 
-  const handleDownloadCode = () => {
+function SettingsSection({ title, children }: SettingsSectionProps) {
+  return (
+    <div>
+      <p className="mb-1 text-sm text-muted-foreground">{title}</p>
+      <div className="flex flex-col gap-1">{children}</div>
+    </div>
+  );
+}
+
+export default function Settings() {
+  const { code, pipInstall, isLibLoading } = useStore();
+
+  const handleDownloadCode = useCallback(() => {
     const blob = new Blob([code], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -33,42 +46,30 @@ export default function Settings() {
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [code]);
 
-  const handlePipInstall = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const packageName = (form.elements.namedItem("lib") as HTMLInputElement)
-      .value;
-    const lib = packageName.replace("pip install ", "").trim();
+  const handlePipInstall = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const packageName = new FormData(e.currentTarget).get("lib") as string;
+      await pipInstall(packageName);
+    },
+    [pipInstall]
+  );
 
-    if (!window.micropip || !lib) return;
-
-    setIsLibLoading(true);
-    try {
-      await window.micropip.install(lib, true);
-      setOutput(`pip install ${lib} successfully installed`);
-      setError(null);
-    } catch (e) {
-      setError(`Failed to install ${lib}: ${(e as Error).message}`);
-    } finally {
-      setIsLibLoading(false);
-    }
-  };
-
-  const handleShareCode = () => {
+  const handleCodeShare = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     urlParams.set("v", btoa(code));
     const newUrl = `${window.location.origin}${window.location.pathname}?${urlParams.toString()}${window.location.hash}`;
     window.history.replaceState({}, document.title, newUrl);
     navigator.clipboard.writeText(newUrl);
-  };
+  }, [code]);
 
   return (
     <Drawer>
       <DrawerTrigger asChild>
         <Button
-          title="Toggle settings drawer"
+          title="Open Settings"
           variant="secondary"
           className="flex items-center space-x-2"
         >
@@ -85,10 +86,7 @@ export default function Settings() {
             </DrawerDescription>
           </DrawerHeader>
           <div className="flex flex-col gap-4 px-4 py-2 pb-0">
-            <div>
-              <p className="mb-1 text-sm text-muted-foreground">
-                Download libraries
-              </p>
+            <SettingsSection title="Download libraries">
               <form className="flex gap-1" onSubmit={handlePipInstall}>
                 <Input
                   type="text"
@@ -110,30 +108,27 @@ export default function Settings() {
                   )}
                 </Button>
               </form>
-            </div>
-            <div>
-              <p className="mb-1 text-sm text-foreground">Share your code</p>
-              <div className="flex flex-col gap-1">
-                <Button
-                  title="Download the code"
-                  variant="secondary"
-                  onClick={handleDownloadCode}
-                  className="flex items-center justify-center"
-                >
-                  <DownloadIcon className="mr-2 h-5 w-5" />
-                  <span>Download Code</span>
-                </Button>
-                <Button
-                  title="Share the code"
-                  variant="secondary"
-                  onClick={handleShareCode}
-                  className="flex items-center justify-center"
-                >
-                  <UploadIcon className="mr-2 h-5 w-5" />
-                  <span>Share Code</span>
-                </Button>
-              </div>
-            </div>
+            </SettingsSection>
+            <SettingsSection title="Share your code">
+              <Button
+                title="Download the code"
+                variant="secondary"
+                onClick={handleDownloadCode}
+                className="flex items-center justify-center"
+              >
+                <DownloadIcon className="mr-2 h-5 w-5" />
+                <span>Download Code</span>
+              </Button>
+              <Button
+                title="Share the code"
+                variant="secondary"
+                onClick={handleCodeShare}
+                className="flex items-center justify-center"
+              >
+                <UploadIcon className="mr-2 h-5 w-5" />
+                <span>Share Code</span>
+              </Button>
+            </SettingsSection>
           </div>
           <DrawerFooter>
             <DrawerClose asChild>

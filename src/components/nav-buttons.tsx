@@ -1,63 +1,108 @@
-import { useCallback } from "react";
-import { useStore } from "@/store";
+import { useCallback, memo } from "react";
+import { useStore } from "@/store/useStore";
 
 import { Button } from "./ui/button";
 import Settings from "./settings";
-import ModeToggle from "./mode-toggle";
-import { Separator } from "./ui/separator";
 
-import { ReplaceIcon, PlayIcon, TrashIcon } from "lucide-react";
+import {
+  ReplaceIcon,
+  PlayIcon,
+  Trash2Icon,
+  LoaderCircleIcon
+} from "lucide-react";
 
-export default function ButtonsNav() {
-  const { setDirection, direction, clearOutput, setError, runCode, code } =
-    useStore();
+const ButtonsNav = () => {
+  const {
+    setDirection,
+    direction,
+    clearOutput,
+    setError,
+    runCode,
+    code,
+    isCodeExecuting
+  } = useStore();
 
-  const handleChangeDirection = useCallback(() => {
+  const handleDirectionChange = useCallback(() => {
     setDirection(direction === "vertical" ? "horizontal" : "vertical");
   }, [direction, setDirection]);
 
-  const handleCodeDelete = useCallback(() => {
+  const handleTerminalClear = useCallback(() => {
     clearOutput("Running Python 3.12.1");
     setError(null);
   }, [clearOutput, setError]);
 
-  const handleRunCode = useCallback(async () => {
-    await runCode(code);
+  const handleRunCode = useCallback(() => {
+    runCode(code);
   }, [runCode, code]);
 
   return (
-    <>
-      <section className="flex justify-between gap-2 bg-background p-2">
-        <div className="flex grow items-center justify-center gap-1">
-          <Button
-            title="Execute the code"
+    <nav className="mb-2 w-full rounded-b-lg bg-gray-900 px-4 py-2">
+      <div className="flex flex-wrap items-center justify-center gap-1 sm:justify-between md:gap-2">
+        <div className="flex flex-wrap items-center gap-1 md:gap-2">
+          <NavButton
             onClick={handleRunCode}
-            variant="secondary"
-          >
-            <PlayIcon className="h-5 w-5" />
-            <span className="ml-2">Run</span>
-          </Button>
-          <Button
-            title="Clear the terminal"
-            onClick={handleCodeDelete}
-            variant="secondary"
-          >
-            <TrashIcon className="h-5 w-5" />
-            <span className="ml-2 hidden md:inline">Clear Terminal</span>
-          </Button>
-          <Button
+            disabled={isCodeExecuting}
+            icon={
+              isCodeExecuting ? (
+                <LoaderCircleIcon className="h-5 w-5 animate-spin" />
+              ) : (
+                <PlayIcon className="h-5 w-5" />
+              )
+            }
+            label="Run"
+            title="Execute Python Code"
+          />
+          <NavButton
+            onClick={handleTerminalClear}
+            disabled={isCodeExecuting}
+            icon={<Trash2Icon className="h-5 w-5" />}
+            label="Clear Terminal"
+            title="Clear Terminal"
+          />
+          <NavButton
+            onClick={handleDirectionChange}
+            icon={<ReplaceIcon className="h-5 w-5" />}
+            label={
+              direction.substring(0, 1).toUpperCase() + direction.substring(1)
+            }
             title="Change direction"
-            variant="secondary"
-            onClick={handleChangeDirection}
-          >
-            <ReplaceIcon className="h-5 w-5" />
-            <span className="ml-2 hidden md:inline">Direction</span>
-          </Button>
-          <Settings />
-          <ModeToggle />
+          />
         </div>
-      </section>
-      <Separator />
-    </>
+        <div className="flex items-center">
+          <Settings />
+        </div>
+      </div>
+    </nav>
   );
-}
+};
+
+const NavButton = memo(
+  ({
+    onClick,
+    disabled,
+    icon,
+    label,
+    title
+  }: {
+    onClick: () => void;
+    disabled?: boolean;
+    icon: React.ReactNode;
+    label: string;
+    title: string;
+  }) => (
+    <Button
+      onClick={onClick}
+      disabled={disabled}
+      variant="secondary"
+      className="text-foreground"
+      title={title}
+    >
+      {icon}
+      <span className="ml-2 hidden sm:inline">{label}</span>
+    </Button>
+  )
+);
+
+NavButton.displayName = "NavButton";
+
+export default memo(ButtonsNav);
